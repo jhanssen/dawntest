@@ -12,12 +12,16 @@ static void PrintGLFWError(int code, const char* message) {
     Log(Log::Info) << "GLFW error: " << code << " - " << message;
 }
 
-static void animationThread(GLFWwindow* window)
+static void animationThread(GLFWwindow* window, int width, int height)
 {
     // glfwMakeContextCurrent(window);
 
     Animation animation;
-    animation.run();
+    animation.init(window, width, height);
+
+    for (;;) {
+        animation.frame();
+    }
 }
 
 int main(int argc, char** argv)
@@ -61,7 +65,7 @@ int main(int argc, char** argv)
     // glfwMakeContextCurrent(nullptr);
 
     // make the animation thread
-    std::thread thread = std::thread(animationThread, window);
+    std::thread thread = std::thread(animationThread, window, width, height);
 
     while (!glfwWindowShouldClose(window)) {
         glfwPollEvents();

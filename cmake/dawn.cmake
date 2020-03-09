@@ -52,9 +52,12 @@ find_library(LIBSHADERC_SPVC shaderc_spvc PATHS ${DAWN_BINARY_DIR}
 
 message("-- Using dawn from ${LIBDAWN_NATIVE}")
 
+list(APPEND DAWN_INCLUDE_DIRS ${DAWN_BINARY_DIR}/gen/src/include ${DAWN_SOURCE_DIR}/src/include ${DAWN_SOURCE_DIR}/third_party/vulkan-headers/include)
+set(SHADERC_INCLUDE_DIRS ${DAWN_SOURCE_DIR}/third_party/shaderc/libshaderc/include)
+
 add_library(DAWN::libdawn_native UNKNOWN IMPORTED)
 set_target_properties(DAWN::libdawn_native PROPERTIES
-    INTERFACE_INCLUDE_DIRECTORIES "${DAWN_BINARY_DIR}/gen/src/include;${DAWN_SOURCE_DIR}/src/include")
+    INTERFACE_INCLUDE_DIRECTORIES "${DAWN_INCLUDE_DIRS}")
 set_target_properties(DAWN::libdawn_native PROPERTIES
     IMPORTED_LINK_INTERFACE_LANGUAGES "CXX"
     IMPORTED_LOCATION ${LIBDAWN_NATIVE})
@@ -71,6 +74,8 @@ set_target_properties(DAWN::libdawn_proc PROPERTIES
 
 add_library(DAWN::libshaderc UNKNOWN IMPORTED)
 set_target_properties(DAWN::libshaderc PROPERTIES
+    INTERFACE_INCLUDE_DIRECTORIES "${SHADERC_INCLUDE_DIRS}")
+set_target_properties(DAWN::libshaderc PROPERTIES
     IMPORTED_LINK_INTERFACE_LANGUAGES "CXX"
     IMPORTED_LOCATION ${LIBSHADERC})
 
@@ -78,3 +83,9 @@ add_library(DAWN::libshaderc_spvc UNKNOWN IMPORTED)
 set_target_properties(DAWN::libshaderc_spvc PROPERTIES
     IMPORTED_LINK_INTERFACE_LANGUAGES "CXX"
     IMPORTED_LOCATION ${LIBSHADERC_SPVC})
+
+set(DAWNCPP_SOURCE_FILE ${DAWN_BINARY_DIR}/gen/src/dawn/webgpu_cpp.cpp)
+
+add_library(dawn_libdawn_cpp STATIC ${DAWNCPP_SOURCE_FILE})
+target_include_directories(dawn_libdawn_cpp PRIVATE "${DAWN_INCLUDE_DIRS}")
+add_library(DAWN::libdawn_cpp ALIAS dawn_libdawn_cpp)

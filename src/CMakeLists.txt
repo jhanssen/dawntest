@@ -14,4 +14,4 @@ set(SOURCES
 
 add_executable(dt ${SOURCES})
 
-target_link_libraries(dt glm::glm glfw ${GLFW_LIBRARIES} DAWN::libdawn_native DAWN::libdawn_wire DAWN::libdawn_proc DAWN::libshaderc DAWN::libshaderc_spvc reckoning)
+target_link_libraries(dt glm::glm glfw ${GLFW_LIBRARIES} DAWN::libdawn_native DAWN::libdawn_wire DAWN::libdawn_proc DAWN::libshaderc DAWN::libshaderc_spvc DAWN::libdawn_cpp reckoning)
