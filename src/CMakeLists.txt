@@ -9,8 +9,9 @@ include(${DAWNTEST_CMAKE_DIR}/dawn.cmake)
 
 set(SOURCES
     main.cpp
+    Animation.cpp
     )
 
 add_executable(dt ${SOURCES})
 
-target_link_libraries(dt glm::glm glfw ${GLFW_LIBRARIES} DAWN::libdawn reckoning)
+target_link_libraries(dt glm::glm glfw ${GLFW_LIBRARIES} DAWN::libdawn_native DAWN::libdawn_wire DAWN::libdawn_proc DAWN::libshaderc DAWN::libshaderc_spvc reckoning)

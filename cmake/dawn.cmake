@@ -52,13 +52,29 @@ find_library(LIBSHADERC_SPVC shaderc_spvc PATHS ${DAWN_BINARY_DIR}
 
 message("-- Using dawn from ${LIBDAWN_NATIVE}")
 
-add_library(DAWN::libdawn UNKNOWN IMPORTED)
-set_target_properties(DAWN::libdawn PROPERTIES
-    INTERFACE_INCLUDE_DIRECTORIES ${DAWN_BINARY_DIR}/gen/src/include)
-set_target_properties(DAWN::libdawn PROPERTIES
+add_library(DAWN::libdawn_native UNKNOWN IMPORTED)
+set_target_properties(DAWN::libdawn_native PROPERTIES
+    INTERFACE_INCLUDE_DIRECTORIES "${DAWN_BINARY_DIR}/gen/src/include;${DAWN_SOURCE_DIR}/src/include")
+set_target_properties(DAWN::libdawn_native PROPERTIES
     IMPORTED_LINK_INTERFACE_LANGUAGES "CXX"
-    IMPORTED_LOCATION ${LIBDAWN_NATIVE}
-    IMPORTED_LOCATION ${LIBDAWN_WIRE}
-    IMPORTED_LOCATION ${LIBDAWN_PROC}
-    IMPORTED_LOCATION ${LIBSHADERC}
+    IMPORTED_LOCATION ${LIBDAWN_NATIVE})
+
+add_library(DAWN::libdawn_wire UNKNOWN IMPORTED)
+set_target_properties(DAWN::libdawn_wire PROPERTIES
+    IMPORTED_LINK_INTERFACE_LANGUAGES "CXX"
+    IMPORTED_LOCATION ${LIBDAWN_WIRE})
+
+add_library(DAWN::libdawn_proc UNKNOWN IMPORTED)
+set_target_properties(DAWN::libdawn_proc PROPERTIES
+    IMPORTED_LINK_INTERFACE_LANGUAGES "CXX"
+    IMPORTED_LOCATION ${LIBDAWN_PROC})
+
+add_library(DAWN::libshaderc UNKNOWN IMPORTED)
+set_target_properties(DAWN::libshaderc PROPERTIES
+    IMPORTED_LINK_INTERFACE_LANGUAGES "CXX"
+    IMPORTED_LOCATION ${LIBSHADERC})
+
+add_library(DAWN::libshaderc_spvc UNKNOWN IMPORTED)
+set_target_properties(DAWN::libshaderc_spvc PROPERTIES
+    IMPORTED_LINK_INTERFACE_LANGUAGES "CXX"
     IMPORTED_LOCATION ${LIBSHADERC_SPVC})
