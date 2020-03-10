@@ -70,8 +70,7 @@ public:
         [mLayer setPixelFormat:MTLPixelFormatBGRA8Unorm];
         [mLayer setDrawableSize:size];
 
-        constexpr uint32_t kFramebufferOnlyTextureUsages =
-        WGPUTextureUsage_OutputAttachment | WGPUTextureUsage_Present;
+        constexpr uint32_t kFramebufferOnlyTextureUsages = WGPUTextureUsage_OutputAttachment | WGPUTextureUsage_Present;
         bool hasOnlyFramebufferUsages = !(usage & (~kFramebufferOnlyTextureUsages));
         if (hasOnlyFramebufferUsages) {
             [mLayer setFramebufferOnly:YES];

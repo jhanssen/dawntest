@@ -2,11 +2,15 @@
 #include <GLFW/glfw3.h>
 #include <args/Args.h>
 #include <args/Parser.h>
+#include <event/Loop.h>
 #include <log/Log.h>
 #include <thread>
 
 using namespace reckoning;
 using namespace reckoning::log;
+using namespace std::chrono_literals;
+
+// #define ANIMATION_USE_THREAD
 
 static void PrintGLFWError(int code, const char* message) {
     Log(Log::Info) << "GLFW error: " << code << " - " << message;
@@ -61,6 +65,7 @@ int main(int argc, char** argv)
     // prepare for moving the glfw context to the animation thread
     // glfwMakeContextCurrent(nullptr);
 
+#ifdef ANIMATION_USE_THREAD
     // make the animation thread
     std::thread thread = std::thread(animationThread, window, width, height);
 
@@ -69,6 +74,22 @@ int main(int argc, char** argv)
     }
 
     thread.join();
+#else
+    std::shared_ptr<event::Loop> loop = event::Loop::create();
+
+    Animation animation;
+    animation.init(window, width, height);
+
+    while (!glfwWindowShouldClose(window)) {
+        glfwPollEvents();
+        animation.frame();
+        loop->execute(16ms);
+        if (loop->stopped())
+            break;
+    }
+
+    loop.reset();
+#endif
 
     return 0;
 }

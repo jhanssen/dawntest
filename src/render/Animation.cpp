@@ -38,10 +38,7 @@ static void PrintDeviceError(WGPUErrorType errorType, const char* message, void*
 #ifdef __APPLE__
 static constexpr wgpu::BackendType backendType = wgpu::BackendType::Metal;
 #else
-#include <dawn_native/VulkanBackend.h>
-
 static constexpr wgpu::BackendType backendType = wgpu::BackendType::Vulkan;
-
 #endif
 
 void Animation::init(GLFWwindow* window, int width, int height)
