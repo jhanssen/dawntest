@@ -180,7 +180,7 @@ void Animation::init()
             queue.Submit(1, &copy);
         };
 
-        initBuffers();
+        // initBuffers();
         initTextures();
 
         // wgpu::ShaderModule vsModule =
