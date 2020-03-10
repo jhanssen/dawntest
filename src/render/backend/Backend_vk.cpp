@@ -3,6 +3,7 @@
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
 #include <dawn_native/VulkanBackend.h>
+#include <cassert>
 
 class BackendBinding : public AbstractBackendBinding {
 public:
