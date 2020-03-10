@@ -5,9 +5,9 @@
 #include <dawn_native/VulkanBackend.h>
 #include <cassert>
 
-class BackendBinding : public AbstractBackendBinding {
+class VulkanBinding : public BackendBinding {
 public:
-    BackendBinding(GLFWwindow* window, WGPUDevice device) : AbstractBackendBinding(window, device) {
+    VulkanBinding(GLFWwindow* window, WGPUDevice device) : BackendBinding(window, device) {
     }
 
     uint64_t GetSwapChainImplementation() override {
@@ -31,7 +31,7 @@ private:
     DawnSwapChainImplementation mSwapchainImpl = {};
 };
 
-std::shared_ptr<AbstractBackendBinding> makeBackendBinding(GLFWwindow* window, WGPUDevice device)
+std::shared_ptr<BackendBinding> makeBackendBinding(GLFWwindow* window, WGPUDevice device)
 {
-    return std::make_shared<BackendBinding>(window, device);
+    return std::make_shared<VulkanBinding>(window, device);
 }

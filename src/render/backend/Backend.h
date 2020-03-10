@@ -7,15 +7,15 @@
 
 typedef struct GLFWwindow GLFWwindow;
 
-class AbstractBackendBinding {
+class BackendBinding {
 public:
-    virtual ~AbstractBackendBinding() = default;
+    virtual ~BackendBinding() = default;
 
     virtual uint64_t GetSwapChainImplementation() = 0;
     virtual WGPUTextureFormat GetPreferredSwapChainTextureFormat() = 0;
 
 protected:
-    AbstractBackendBinding(GLFWwindow* window, WGPUDevice device)
+    BackendBinding(GLFWwindow* window, WGPUDevice device)
         : mWindow(window), mDevice(device)
     {
     }
@@ -25,6 +25,6 @@ protected:
     WGPUDevice mDevice = nullptr;
 };
 
-std::shared_ptr<AbstractBackendBinding> makeBackendBinding(GLFWwindow* window, WGPUDevice device);
+std::shared_ptr<BackendBinding> makeBackendBinding(GLFWwindow* window, WGPUDevice device);
 
 #endif // BACKEND_H

@@ -113,10 +113,10 @@ private:
     id<MTLTexture> mCurrentTexture = nil;
 };
 
-class MetalBinding : public AbstractBackendBinding {
+class MetalBinding : public BackendBinding {
 public:
     MetalBinding(GLFWwindow* window, WGPUDevice device)
-        : AbstractBackendBinding(window, device)
+        : BackendBinding(window, device)
     {
     }
 
@@ -136,7 +136,7 @@ private:
     DawnSwapChainImplementation mSwapchainImpl = {};
 };
 
-std::shared_ptr<AbstractBackendBinding> makeBackendBinding(GLFWwindow* window, WGPUDevice device)
+std::shared_ptr<BackendBinding> makeBackendBinding(GLFWwindow* window, WGPUDevice device)
 {
     return std::make_shared<MetalBinding>(window, device);
 }
