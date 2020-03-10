@@ -191,13 +191,8 @@ void Animation::init(GLFWwindow* window, int width, int height)
 
 }
 
-struct {uint32_t a; float b;} s;
 void Animation::frame()
 {
-    s.a = (s.a + 1) % 256;
-    s.b += 0.02f;
-    if (s.b >= 1.0f) {s.b = 0.0f;}
-
     wgpu::TextureView backbufferView = swapchain.GetCurrentTextureView();
     ComboRenderPassDescriptor renderPass({backbufferView}, depthStencilView);
 
