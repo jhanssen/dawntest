@@ -9,7 +9,8 @@ include(${DAWNTEST_CMAKE_DIR}/dawn.cmake)
 
 set(SOURCES
     main.cpp
-    Animation.cpp
+    render/Animation.cpp
+    render/Utils.cpp
     )
 
 add_executable(dt ${SOURCES})
