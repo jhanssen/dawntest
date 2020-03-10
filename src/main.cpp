@@ -10,24 +10,20 @@ using namespace reckoning;
 using namespace reckoning::log;
 using namespace std::chrono_literals;
 
-// #define ANIMATION_USE_THREAD
+#define ANIMATION_USE_THREAD
 
 static void PrintGLFWError(int code, const char* message) {
     Log(Log::Info) << "GLFW error: " << code << " - " << message;
 }
 
 #ifdef ANIMATION_USE_THREAD
-static void animationThread(GLFWwindow* window, int width, int height)
+static void animationThread(Animation* animation, GLFWwindow* window)
 {
     // glfwMakeContextCurrent(window);
-
-    Animation animation;
-    animation.init(window, width, height);
-
     std::shared_ptr<event::Loop> loop = event::Loop::create();
 
     for (;;) {
-        animation.frame();
+        animation->frame();
         loop->execute(16ms);
         if (loop->stopped())
             break;
@@ -80,7 +76,10 @@ int main(int argc, char** argv)
 
 #ifdef ANIMATION_USE_THREAD
     // make the animation thread
-    std::thread thread = std::thread(animationThread, window, width, height);
+    Animation animation;
+    animation.init(window, width, height);
+
+    std::thread thread = std::thread(animationThread, &animation, window);
 
     while (!glfwWindowShouldClose(window)) {
         glfwPollEvents();
