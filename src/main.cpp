@@ -68,5 +68,7 @@ int main(int argc, char** argv)
         glfwPollEvents();
     }
 
+    thread.join();
+
     return 0;
 }

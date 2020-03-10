@@ -28,6 +28,7 @@ private:
     wgpu::TextureView depthStencilView;
     wgpu::RenderPipeline pipeline;
     wgpu::BindGroup bindGroup;
+    GLFWwindow* mWindow { nullptr };
 };
 
 #endif // ANIMATION_H

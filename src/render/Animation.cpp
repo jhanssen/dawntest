@@ -90,6 +90,8 @@ void Animation::init(GLFWwindow* window, int width, int height)
 {
     Log(Log::Info) << "go me";
 
+    mWindow = window;
+
     instance = std::make_unique<dawn_native::Instance>();
     instance->DiscoverDefaultAdapters();
 
@@ -242,6 +244,13 @@ void Animation::run()
     for (;;) {
         frame();
         loop->execute(16ms);
+        if (loop->stopped())
+            break;
+    }
+
+    // not thread safe?
+    if (mWindow) {
+        glfwSetWindowShouldClose(mWindow, 1);
     }
 }
 
