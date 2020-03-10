@@ -4,13 +4,33 @@
 #include <args/Parser.h>
 #include <event/Loop.h>
 #include <log/Log.h>
+#include <atomic>
 #include <thread>
+#include <memory>
+#include <signal.h>
 
 using namespace reckoning;
 using namespace reckoning::log;
 using namespace std::chrono_literals;
 
 #define ANIMATION_USE_THREAD
+
+std::shared_ptr<event::Loop> mainLoopPtr;
+std::shared_ptr<event::Loop> animationLoopPtr;
+
+static void sigintHandler(int)
+{
+    // might not be safe to do this from a signal handler, but eh
+    std::shared_ptr<event::Loop> loop;
+    loop = atomic_load(&mainLoopPtr);
+    if (loop) {
+        loop->exit();
+    }
+    loop = atomic_load(&animationLoopPtr);
+    if (loop) {
+        loop->exit();
+    }
+}
 
 static void PrintGLFWError(int code, const char* message) {
     Log(Log::Info) << "GLFW error: " << code << " - " << message;
@@ -21,6 +41,7 @@ static void animationThread(Animation* animation, GLFWwindow* window)
 {
     // glfwMakeContextCurrent(window);
     std::shared_ptr<event::Loop> loop = event::Loop::create();
+    atomic_store(&animationLoopPtr, loop);
 
     for (;;) {
         animation->frame();
@@ -29,6 +50,9 @@ static void animationThread(Animation* animation, GLFWwindow* window)
             break;
     }
 
+    loop.reset();
+    atomic_store(&animationLoopPtr, loop);
+
     // not thread safe?
     glfwSetWindowShouldClose(window, 1);
 }
@@ -36,6 +60,8 @@ static void animationThread(Animation* animation, GLFWwindow* window)
 
 int main(int argc, char** argv)
 {
+    signal(SIGINT, sigintHandler);
+
     auto args = args::Parser::parse(argc, argv);
 
     // default configs
@@ -79,13 +105,18 @@ int main(int argc, char** argv)
     Animation animation;
     animation.init(window, width, height);
 
-    std::thread thread = std::thread(animationThread, &animation, window);
+    std::shared_ptr<event::Loop> loop = event::Loop::create();
+    atomic_store(&mainLoopPtr, loop);
 
+    std::thread thread = std::thread(animationThread, &animation, window);
     while (!glfwWindowShouldClose(window)) {
         glfwPollEvents();
+        loop->execute(50ms);
     }
-
     thread.join();
+
+    loop.reset();
+    atomic_store(&mainLoopPtr, loop);
 #else
     std::shared_ptr<event::Loop> loop = event::Loop::create();
 
