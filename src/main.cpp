@@ -16,14 +16,27 @@ static void PrintGLFWError(int code, const char* message) {
     Log(Log::Info) << "GLFW error: " << code << " - " << message;
 }
 
+#ifdef ANIMATION_USE_THREAD
 static void animationThread(GLFWwindow* window, int width, int height)
 {
     // glfwMakeContextCurrent(window);
 
     Animation animation;
     animation.init(window, width, height);
-    animation.run();
+
+    std::shared_ptr<event::Loop> loop = event::Loop::create();
+
+    for (;;) {
+        animation.frame();
+        loop->execute(16ms);
+        if (loop->stopped())
+            break;
+    }
+
+    // not thread safe?
+    glfwSetWindowShouldClose(window, 1);
 }
+#endif
 
 int main(int argc, char** argv)
 {

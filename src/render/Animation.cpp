@@ -2,7 +2,6 @@
 #include "Utils.h"
 #include "backend/Backend.h"
 #include <log/Log.h>
-#include <event/Loop.h>
 #include <dawn/dawn_proc.h>
 #include <shaderc/shaderc.hpp>
 #include <memory>
@@ -190,23 +189,6 @@ void Animation::init(GLFWwindow* window, int width, int height)
             {1, view}
         });
 
-}
-
-void Animation::run()
-{
-    std::shared_ptr<event::Loop> loop = event::Loop::create();
-
-    for (;;) {
-        frame();
-        loop->execute(16ms);
-        if (loop->stopped())
-            break;
-    }
-
-    // not thread safe?
-    if (mWindow) {
-        glfwSetWindowShouldClose(mWindow, 1);
-    }
 }
 
 struct {uint32_t a; float b;} s;
