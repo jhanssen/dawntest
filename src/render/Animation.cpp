@@ -1,4 +1,5 @@
 #include "Animation.h"
+#include "Constants.h"
 #include "Utils.h"
 #include <log/Log.h>
 #include <dawn/dawn_proc.h>
@@ -103,7 +104,7 @@ void Animation::init()
         if (!buffer) {
             return reckoning::then::rejected<image::Decoder::Image>("no buffer from fetch");
         }
-        return decoder->decode(std::move(buffer));
+        return decoder->decode(std::move(buffer), kTextureRowPitchAlignment);
     }).then([this](image::Decoder::Image&& image) -> void {
         if (!image.data) {
             return;
@@ -145,31 +146,9 @@ void Animation::init()
             wgpu::SamplerDescriptor samplerDesc = GetDefaultSamplerDescriptor();
             sampler = device.CreateSampler(&samplerDesc);
 
-            auto pitch = [](uint32_t w, uint32_t p) {
-                const auto mod = w % p;
-                return mod ? w + (p - mod) : w;
-            };
-
-            const uint32_t bpp = 4;
-
-            auto data = image.data;
-            const uint32_t pitched = pitch(image.width, 256) * bpp;
-            const uint32_t imageWidth = image.width * bpp;
-            if (pitched > imageWidth) {
-                // ugh
-                auto newdata = buffer::Buffer::create(pitched * image.height);
-                size_t oldoffset = 0, newoffset = 0;
-                for (auto y = 0; y < image.height; ++y) {
-                    memcpy(newdata->data() + newoffset, data->data() + oldoffset, imageWidth);
-                    newoffset += pitched;
-                    oldoffset += imageWidth;
-                }
-                data = newdata;
-            }
-
             wgpu::Buffer stagingBuffer = CreateBufferFromData(
-                device, data->data(), static_cast<uint32_t>(data->size()), wgpu::BufferUsage::CopySrc);
-            wgpu::BufferCopyView bufferCopyView = CreateBufferCopyView(stagingBuffer, 0, pitched, 0);
+                device, image.data->data(), static_cast<uint32_t>(image.data->size()), wgpu::BufferUsage::CopySrc);
+            wgpu::BufferCopyView bufferCopyView = CreateBufferCopyView(stagingBuffer, 0, image.bpl, 0);
             wgpu::TextureCopyView textureCopyView = CreateTextureCopyView(texture, 0, 0, {0, 0, 0});
             wgpu::Extent3D copySize = {image.width, image.height, 1};
 

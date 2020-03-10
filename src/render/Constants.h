@@ -8,5 +8,6 @@ static constexpr float kLodMax = 1000.0;
 static constexpr uint32_t kMaxVertexBuffers = 16u;
 static constexpr uint32_t kMaxVertexAttributes = 16u;
 static constexpr uint32_t kMaxColorAttachments = 4u;
+static constexpr uint32_t kTextureRowPitchAlignment = 256u;
 
 #endif // CONSTANTS_H
