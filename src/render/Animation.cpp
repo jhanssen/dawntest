@@ -1,11 +1,11 @@
 #include "Animation.h"
 #include "Utils.h"
-#include "backend/Backend.h"
 #include <log/Log.h>
 #include <dawn/dawn_proc.h>
 #include <shaderc/shaderc.hpp>
 #include <memory>
 #include <cassert>
+#include <glm/vec4.hpp>
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
 
@@ -40,9 +40,17 @@ static constexpr wgpu::BackendType backendType = wgpu::BackendType::Metal;
 static constexpr wgpu::BackendType backendType = wgpu::BackendType::Vulkan;
 #endif
 
-void Animation::init(GLFWwindow* window, int width, int height)
+struct UniformGeometry
+{
+    glm::vec4 geometry;
+};
+
+void Animation::create(GLFWwindow* window, int w, int h)
 {
     Log(Log::Info) << "go me";
+
+    width = w;
+    height = h;
 
     mWindow = window;
 
@@ -65,130 +73,214 @@ void Animation::init(GLFWwindow* window, int width, int height)
     WGPUDevice backendDevice = backendAdapter.CreateDevice();
     DawnProcTable backendProcs = dawn_native::GetProcs();
 
-    auto binding = makeBackendBinding(window, backendDevice);
+    binding = makeBackendBinding(window, backendDevice);
 
     dawnProcSetProcs(&backendProcs);
     backendProcs.deviceSetUncapturedErrorCallback(backendDevice, PrintDeviceError, nullptr);
     device = wgpu::Device::Acquire(backendDevice);
 
-    auto GetSwapChain = [&binding](const wgpu::Device& device) {
+    auto GetSwapChain = [this](const wgpu::Device& device) {
         wgpu::SwapChainDescriptor swapChainDesc;
         swapChainDesc.implementation = binding->GetSwapChainImplementation();
         return device.CreateSwapChain(nullptr, &swapChainDesc);
     };
 
-    auto GetPreferredSwapChainTextureFormat = [&binding]() {
+    auto GetPreferredSwapChainTextureFormat = [this]() {
         return static_cast<wgpu::TextureFormat>(binding->GetPreferredSwapChainTextureFormat());
     };
 
     queue = device.CreateQueue();
     swapchain = GetSwapChain(device);
     swapchain.Configure(GetPreferredSwapChainTextureFormat(), wgpu::TextureUsage::OutputAttachment, width, height);
+}
 
-    auto initBuffers = [this]() {
-        static const uint32_t indexData[3] = {
-            0, 1, 2,
-        };
-        indexBuffer = CreateBufferFromData(device, indexData, sizeof(indexData),
-                                           wgpu::BufferUsage::Index);
+void Animation::init()
+{
+    fetch = net::Fetch::create();
+    decoder = image::Decoder::create();
 
-        static const float vertexData[12] = {
-            0.0f, 0.5f, 0.0f, 1.0f,
-            -0.5f, -0.5f, 0.0f, 1.0f,
-            0.5f, -0.5f, 0.0f, 1.0f,
-        };
-        vertexBuffer = CreateBufferFromData(device, vertexData, sizeof(vertexData),
-                                            wgpu::BufferUsage::Vertex);
-    };
-
-    auto initTextures = [this]() {
-        wgpu::TextureDescriptor descriptor;
-        descriptor.dimension = wgpu::TextureDimension::e2D;
-        descriptor.size.width = 1024;
-        descriptor.size.height = 1024;
-        descriptor.size.depth = 1;
-        descriptor.arrayLayerCount = 1;
-        descriptor.sampleCount = 1;
-        descriptor.format = wgpu::TextureFormat::RGBA8Unorm;
-        descriptor.mipLevelCount = 1;
-        descriptor.usage = wgpu::TextureUsage::CopyDst | wgpu::TextureUsage::Sampled;
-        texture = device.CreateTexture(&descriptor);
-
-        wgpu::SamplerDescriptor samplerDesc = GetDefaultSamplerDescriptor();
-        sampler = device.CreateSampler(&samplerDesc);
-
-        // Initialize the texture with arbitrary data until we can load images
-        std::vector<uint8_t> data(4 * 1024 * 1024, 0);
-        for (size_t i = 0; i < data.size(); ++i) {
-            data[i] = static_cast<uint8_t>(i % 253);
+    fetch->fetch("https://www.google.com/images/branding/googlelogo/2x/googlelogo_color_272x92dp.png").then([this](std::shared_ptr<buffer::Buffer>&& buffer) -> auto& {
+        if (!buffer) {
+            return reckoning::then::rejected<image::Decoder::Image>("no buffer from fetch");
+        }
+        return decoder->decode(std::move(buffer));
+    }).then([this](image::Decoder::Image&& image) -> void {
+        if (!image.data) {
+            return;
         }
 
-        wgpu::Buffer stagingBuffer = CreateBufferFromData(
-            device, data.data(), static_cast<uint32_t>(data.size()), wgpu::BufferUsage::CopySrc);
-        wgpu::BufferCopyView bufferCopyView = CreateBufferCopyView(stagingBuffer, 0, 0, 0);
-        wgpu::TextureCopyView textureCopyView = CreateTextureCopyView(texture, 0, 0, {0, 0, 0});
-        wgpu::Extent3D copySize = {1024, 1024, 1};
+        auto GetPreferredSwapChainTextureFormat = [this]() {
+            return static_cast<wgpu::TextureFormat>(binding->GetPreferredSwapChainTextureFormat());
+        };
 
-        wgpu::CommandEncoder encoder = device.CreateCommandEncoder();
-        encoder.CopyBufferToTexture(&bufferCopyView, &textureCopyView, &copySize);
+        // auto initBuffers = [this]() {
+            // static const uint32_t indexData[3] = {
+            //     0, 1, 2,
+            // };
+            // indexBuffer = CreateBufferFromData(device, indexData, sizeof(indexData),
+            //                                    wgpu::BufferUsage::Index);
 
-        wgpu::CommandBuffer copy = encoder.Finish();
-        queue.Submit(1, &copy);
-    };
+            // static const float vertexData[12] = {
+            //     0.0f, 0.5f, 0.0f, 1.0f,
+            //     -0.5f, -0.5f, 0.0f, 1.0f,
+            //     0.5f, -0.5f, 0.0f, 1.0f,
+            // };
+            // vertexBuffer = CreateBufferFromData(device, vertexData, sizeof(vertexData),
+            //                                     wgpu::BufferUsage::Vertex);
+        // };
 
-    initBuffers();
-    initTextures();
+        auto initTextures = [this, &image]() {
+            wgpu::TextureDescriptor descriptor;
+            descriptor.dimension = wgpu::TextureDimension::e2D;
+            descriptor.size.width = image.width;
+            descriptor.size.height = image.height;
+            descriptor.size.depth = 1;
+            descriptor.arrayLayerCount = 1;
+            descriptor.sampleCount = 1;
+            descriptor.format = wgpu::TextureFormat::RGBA8Unorm;
+            descriptor.mipLevelCount = 1;
+            descriptor.usage = wgpu::TextureUsage::CopyDst | wgpu::TextureUsage::Sampled;
+            texture = device.CreateTexture(&descriptor);
 
-    wgpu::ShaderModule vsModule =
-    CreateShaderModule(device, SingleShaderStage::Vertex, R"(
+            wgpu::SamplerDescriptor samplerDesc = GetDefaultSamplerDescriptor();
+            sampler = device.CreateSampler(&samplerDesc);
+
+            auto pitch = [](uint32_t w, uint32_t p) {
+                const auto mod = w % p;
+                return mod ? w + (p - mod) : w;
+            };
+
+            const uint32_t bpp = 4;
+
+            auto data = image.data;
+            const uint32_t pitched = pitch(image.width, 256) * bpp;
+            const uint32_t imageWidth = image.width * bpp;
+            if (pitched > imageWidth) {
+                // ugh
+                auto newdata = buffer::Buffer::create(pitched * image.height);
+                size_t oldoffset = 0, newoffset = 0;
+                for (auto y = 0; y < image.height; ++y) {
+                    memcpy(newdata->data() + newoffset, data->data() + oldoffset, imageWidth);
+                    newoffset += pitched;
+                    oldoffset += imageWidth;
+                }
+                data = newdata;
+            }
+
+            wgpu::Buffer stagingBuffer = CreateBufferFromData(
+                device, data->data(), static_cast<uint32_t>(data->size()), wgpu::BufferUsage::CopySrc);
+            wgpu::BufferCopyView bufferCopyView = CreateBufferCopyView(stagingBuffer, 0, pitched, 0);
+            wgpu::TextureCopyView textureCopyView = CreateTextureCopyView(texture, 0, 0, {0, 0, 0});
+            wgpu::Extent3D copySize = {image.width, image.height, 1};
+
+            wgpu::CommandEncoder encoder = device.CreateCommandEncoder();
+            encoder.CopyBufferToTexture(&bufferCopyView, &textureCopyView, &copySize);
+
+            wgpu::CommandBuffer copy = encoder.Finish();
+            queue.Submit(1, &copy);
+        };
+
+        initBuffers();
+        initTextures();
+
+        // wgpu::ShaderModule vsModule =
+        // CreateShaderModule(device, SingleShaderStage::Vertex, R"(
+        // #version 450
+        // layout(location = 0) in vec4 pos;
+        // void main() {
+        //     gl_Position = pos;
+        // })");
+
+        wgpu::ShaderModule vsModule =
+        CreateShaderModule(device, SingleShaderStage::Vertex, R"(
         #version 450
-        layout(location = 0) in vec4 pos;
+
+        layout(set = 0, binding = 2) uniform UniformBufferObject {
+            vec4 geometry;
+        } ubo;
+
+        vec2 positions[4] = vec2[](
+            vec2(-1.0, +1.0),
+            vec2(+1.0, +1.0),
+            vec2(-1.0, -1.0),
+            vec2(+1.0, -1.0)
+        );
+
         void main() {
-            gl_Position = pos;
+            vec2 position = positions[gl_VertexIndex];
+            int x = position.x == -1.0 ? 0 : 2;
+            int y = position.y == +1.0 ? 1 : 3;
+            gl_Position = vec4(ubo.geometry[x], ubo.geometry[y], 0.0, 1.0);
         })");
 
-    wgpu::ShaderModule fsModule =
-    CreateShaderModule(device, SingleShaderStage::Fragment, R"(
+        wgpu::ShaderModule fsModule =
+        CreateShaderModule(device, SingleShaderStage::Fragment, R"(
         #version 450
         layout(set = 0, binding = 0) uniform sampler mySampler;
         layout(set = 0, binding = 1) uniform texture2D myTexture;
 
         layout(location = 0) out vec4 fragColor;
         void main() {
-            fragColor = texture(sampler2D(myTexture, mySampler), gl_FragCoord.xy / vec2(640.0, 480.0));
+            fragColor = texture(sampler2D(myTexture, mySampler), gl_FragCoord.xy / vec2(544.0, 184.0));
         })");
 
-    auto bgl = MakeBindGroupLayout(
-        device, {
-            {0, wgpu::ShaderStage::Fragment, wgpu::BindingType::Sampler},
-            {1, wgpu::ShaderStage::Fragment, wgpu::BindingType::SampledTexture},
-        });
+        auto bgl = MakeBindGroupLayout(
+            device, {
+                {0, wgpu::ShaderStage::Fragment, wgpu::BindingType::Sampler},
+                {1, wgpu::ShaderStage::Fragment, wgpu::BindingType::SampledTexture},
+                {2, wgpu::ShaderStage::Vertex, wgpu::BindingType::UniformBuffer}
+            });
 
-    wgpu::PipelineLayout pl = MakeBasicPipelineLayout(device, &bgl);
+        wgpu::PipelineLayout pl = MakeBasicPipelineLayout(device, &bgl);
 
-    depthStencilView = CreateDefaultDepthStencilView(device, width, height);
+        depthStencilView = CreateDefaultDepthStencilView(device, width, height);
 
-    ComboRenderPipelineDescriptor descriptor(device);
-    descriptor.layout = MakeBasicPipelineLayout(device, &bgl);
-    descriptor.vertexStage.module = vsModule;
-    descriptor.cFragmentStage.module = fsModule;
-    descriptor.cVertexState.vertexBufferCount = 1;
-    descriptor.cVertexState.cVertexBuffers[0].arrayStride = 4 * sizeof(float);
-    descriptor.cVertexState.cVertexBuffers[0].attributeCount = 1;
-    descriptor.cVertexState.cAttributes[0].format = wgpu::VertexFormat::Float4;
-    descriptor.depthStencilState = &descriptor.cDepthStencilState;
-    descriptor.cDepthStencilState.format = wgpu::TextureFormat::Depth24PlusStencil8;
-    descriptor.cColorStates[0].format = GetPreferredSwapChainTextureFormat();
+        ComboRenderPipelineDescriptor descriptor(device);
+        descriptor.layout = MakeBasicPipelineLayout(device, &bgl);
+        descriptor.vertexStage.module = vsModule;
+        descriptor.cFragmentStage.module = fsModule;
+        descriptor.primitiveTopology = wgpu::PrimitiveTopology::TriangleStrip;
+        // descriptor.cVertexState.vertexBufferCount = 1;
+        // descriptor.cVertexState.cVertexBuffers[0].arrayStride = 4 * sizeof(float);
+        // descriptor.cVertexState.cVertexBuffers[0].attributeCount = 1;
+        // descriptor.cVertexState.cAttributes[0].format = wgpu::VertexFormat::Float4;
+        descriptor.depthStencilState = &descriptor.cDepthStencilState;
+        descriptor.cDepthStencilState.format = wgpu::TextureFormat::Depth24PlusStencil8;
+        descriptor.cColorStates[0].format = GetPreferredSwapChainTextureFormat();
+        descriptor.cColorStates[0].colorBlend.srcFactor = wgpu::BlendFactor::SrcAlpha;
+        descriptor.cColorStates[0].colorBlend.dstFactor = wgpu::BlendFactor::OneMinusSrcAlpha;
 
-    pipeline = device.CreateRenderPipeline(&descriptor);
+        pipeline = device.CreateRenderPipeline(&descriptor);
 
-    wgpu::TextureView view = texture.CreateView();
+        wgpu::TextureView view = texture.CreateView();
 
-    bindGroup = MakeBindGroup(device, bgl, {
-            {0, sampler},
-            {1, view}
-        });
+        UniformGeometry geom = { { -1.0, 1.0, 1.0, -1.0 } };
 
+        wgpu::Buffer ubo = CreateBufferFromData(
+            device, &geom, sizeof(geom), wgpu::BufferUsage::Uniform);
+
+        bindGroup = MakeBindGroup(device, bgl, {
+                {0, sampler},
+                {1, view},
+                {2, ubo}
+            });
+
+        ComboRenderBundleEncoderDescriptor bundleDescriptor;
+        bundleDescriptor.colorFormatsCount = 1;
+        bundleDescriptor.cColorFormats[0] = GetPreferredSwapChainTextureFormat();
+        bundleDescriptor.depthStencilFormat = wgpu::TextureFormat::Depth24PlusStencil8;
+
+        wgpu::RenderBundleEncoder renderBundleEncoder = device.CreateRenderBundleEncoder(&bundleDescriptor);
+        renderBundleEncoder.SetPipeline(pipeline);
+        renderBundleEncoder.SetBindGroup(0, bindGroup);
+        // renderBundleEncoder.SetVertexBuffer(0, vertexBuffer);
+        // renderBundleEncoder.SetIndexBuffer(indexBuffer);
+        // renderBundleEncoder.DrawIndexed(3, 1, 0, 0, 0);
+        renderBundleEncoder.Draw(4, 1, 0, 0);
+        wgpu::RenderBundle bundle = renderBundleEncoder.Finish();
+
+        bundles.push_back(bundle);
+    });
 }
 
 void Animation::frame()
@@ -199,11 +291,9 @@ void Animation::frame()
     wgpu::CommandEncoder encoder = device.CreateCommandEncoder();
     {
         wgpu::RenderPassEncoder pass = encoder.BeginRenderPass(&renderPass);
-        pass.SetPipeline(pipeline);
-        pass.SetBindGroup(0, bindGroup);
-        pass.SetVertexBuffer(0, vertexBuffer);
-        pass.SetIndexBuffer(indexBuffer);
-        pass.DrawIndexed(3, 1, 0, 0, 0);
+        if (!bundles.empty()) {
+            pass.ExecuteBundles(bundles.size(), &bundles[0]);
+        }
         pass.EndPass();
     }
 

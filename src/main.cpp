@@ -43,6 +43,8 @@ static void animationThread(Animation* animation, GLFWwindow* window)
     std::shared_ptr<event::Loop> loop = event::Loop::create();
     atomic_store(&animationLoopPtr, loop);
 
+    animation->init();
+
     for (;;) {
         animation->frame();
         loop->execute(16ms);
@@ -103,7 +105,7 @@ int main(int argc, char** argv)
 #ifdef ANIMATION_USE_THREAD
     // make the animation thread
     Animation animation;
-    animation.init(window, width, height);
+    animation.create(window, width, height);
 
     std::shared_ptr<event::Loop> loop = event::Loop::create();
     atomic_store(&mainLoopPtr, loop);
@@ -121,7 +123,8 @@ int main(int argc, char** argv)
     std::shared_ptr<event::Loop> loop = event::Loop::create();
 
     Animation animation;
-    animation.init(window, width, height);
+    animation.create(window, width, height);
+    animation.init();
 
     while (!glfwWindowShouldClose(window)) {
         glfwPollEvents();

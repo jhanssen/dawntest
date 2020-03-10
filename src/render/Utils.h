@@ -64,6 +64,13 @@ public:
     wgpu::RenderPassDepthStencilAttachmentDescriptor cDepthStencilAttachmentInfo;
 };
 
+class ComboRenderBundleEncoderDescriptor : public wgpu::RenderBundleEncoderDescriptor {
+public:
+    ComboRenderBundleEncoderDescriptor();
+
+    std::array<wgpu::TextureFormat, kMaxColorAttachments> cColorFormats;
+};
+
 wgpu::Buffer CreateBufferFromData(const wgpu::Device& device,
                                   const void* data,
                                   uint64_t size,

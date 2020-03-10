@@ -343,3 +343,10 @@ const ComboRenderPassDescriptor& ComboRenderPassDescriptor::operator=(
 
     return *this;
 }
+
+ComboRenderBundleEncoderDescriptor::ComboRenderBundleEncoderDescriptor() {
+    wgpu::RenderBundleEncoderDescriptor* descriptor = this;
+
+    descriptor->colorFormatsCount = 0;
+    descriptor->colorFormats = &cColorFormats[0];
+}
