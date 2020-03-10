@@ -13,6 +13,16 @@ set(SOURCES
     render/Utils.cpp
     )
 
+if (APPLE)
+    list(APPEND SOURCES render/backend/Backend_mt.mm)
+else ()
+    list(APPEND SOURCES render/backend/Backend_vk.cpp)
+endif ()
+
 add_executable(dt ${SOURCES})
 
 target_link_libraries(dt glm::glm glfw ${GLFW_LIBRARIES} DAWN::libdawn_native DAWN::libdawn_wire DAWN::libdawn_proc DAWN::libshaderc DAWN::libshaderc_spvc DAWN::libdawn_cpp reckoning)
+
+if (APPLE)
+    target_link_libraries(dt "-framework Metal -framework QuartzCore")
+endif ()

@@ -1,5 +1,6 @@
 #include "Animation.h"
 #include "Utils.h"
+#include "backend/Backend.h"
 #include <log/Log.h>
 #include <event/Loop.h>
 #include <dawn/dawn_proc.h>
@@ -34,24 +35,6 @@ static void PrintDeviceError(WGPUErrorType errorType, const char* message, void*
     Log(Log::Error) << errorTypeName << "error:" << message;
 }
 
-class AbstractBackendBinding {
-public:
-    virtual ~AbstractBackendBinding() = default;
-
-    virtual uint64_t GetSwapChainImplementation() = 0;
-    virtual WGPUTextureFormat GetPreferredSwapChainTextureFormat() = 0;
-
-protected:
-    AbstractBackendBinding(GLFWwindow* window, WGPUDevice device);
-
-    GLFWwindow* mWindow = nullptr;
-    WGPUDevice mDevice = nullptr;
-};
-
-AbstractBackendBinding::AbstractBackendBinding(GLFWwindow* window, WGPUDevice device)
-    : mWindow(window), mDevice(device) {
-}
-
 #ifdef __APPLE__
 static constexpr wgpu::BackendType backendType = wgpu::BackendType::Metal;
 #else
@@ -59,31 +42,6 @@ static constexpr wgpu::BackendType backendType = wgpu::BackendType::Metal;
 
 static constexpr wgpu::BackendType backendType = wgpu::BackendType::Vulkan;
 
-class BackendBinding : public AbstractBackendBinding {
-public:
-    BackendBinding(GLFWwindow* window, WGPUDevice device) : AbstractBackendBinding(window, device) {
-    }
-
-    uint64_t GetSwapChainImplementation() override {
-        if (mSwapchainImpl.userData == nullptr) {
-            VkSurfaceKHR surface = VK_NULL_HANDLE;
-            if (glfwCreateWindowSurface(dawn_native::vulkan::GetInstance(mDevice), mWindow,
-                                        nullptr, &surface) != VK_SUCCESS) {
-                assert(false);
-            }
-
-            mSwapchainImpl = dawn_native::vulkan::CreateNativeSwapChainImpl(mDevice, surface);
-        }
-        return reinterpret_cast<uint64_t>(&mSwapchainImpl);
-    }
-    WGPUTextureFormat GetPreferredSwapChainTextureFormat() override {
-        assert(mSwapchainImpl.userData != nullptr);
-        return dawn_native::vulkan::GetNativeSwapChainPreferredFormat(&mSwapchainImpl);
-    }
-
-private:
-    DawnSwapChainImplementation mSwapchainImpl = {};
-};
 #endif
 
 void Animation::init(GLFWwindow* window, int width, int height)
@@ -111,7 +69,7 @@ void Animation::init(GLFWwindow* window, int width, int height)
     WGPUDevice backendDevice = backendAdapter.CreateDevice();
     DawnProcTable backendProcs = dawn_native::GetProcs();
 
-    std::shared_ptr<BackendBinding> binding = std::make_shared<BackendBinding>(window, backendDevice);
+    auto binding = makeBackendBinding(window, backendDevice);
 
     dawnProcSetProcs(&backendProcs);
     backendProcs.deviceSetUncapturedErrorCallback(backendDevice, PrintDeviceError, nullptr);
