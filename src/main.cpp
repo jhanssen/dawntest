@@ -18,10 +18,7 @@ static void animationThread(GLFWwindow* window, int width, int height)
 
     Animation animation;
     animation.init(window, width, height);
-
-    for (;;) {
-        animation.frame();
-    }
+    animation.run();
 }
 
 int main(int argc, char** argv)

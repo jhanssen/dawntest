@@ -11,6 +11,9 @@ class Animation
 {
 public:
     void init(GLFWwindow* window, int width, int height);
+    void run();
+
+private:
     void frame();
 
 private:

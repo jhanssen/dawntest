@@ -1,5 +1,6 @@
 #include "Animation.h"
 #include <log/Log.h>
+#include <event/Loop.h>
 #include <dawn/dawn_proc.h>
 #include <shaderc/shaderc.hpp>
 #include <memory>
@@ -9,6 +10,7 @@
 
 using namespace reckoning;
 using namespace reckoning::log;
+using namespace std::chrono_literals;
 
 static constexpr float kLodMin = 0.0;
 static constexpr float kLodMax = 1000.0;
@@ -642,14 +644,22 @@ void Animation::init(GLFWwindow* window, int width, int height)
 
 }
 
+void Animation::run()
+{
+    std::shared_ptr<event::Loop> loop = event::Loop::create();
+
+    for (;;) {
+        frame();
+        loop->execute(16ms);
+    }
+}
+
 struct {uint32_t a; float b;} s;
 void Animation::frame()
 {
     s.a = (s.a + 1) % 256;
     s.b += 0.02f;
     if (s.b >= 1.0f) {s.b = 0.0f;}
-
-    printf("frame\n");
 
     wgpu::TextureView backbufferView = swapchain.GetCurrentTextureView();
     ComboRenderPassDescriptor renderPass({backbufferView}, depthStencilView);
