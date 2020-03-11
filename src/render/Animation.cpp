@@ -93,6 +93,10 @@ void Animation::create(GLFWwindow* window, int w, int h)
     queue = device.CreateQueue();
     swapchain = GetSwapChain(device);
     swapchain.Configure(GetPreferredSwapChainTextureFormat(), wgpu::TextureUsage::OutputAttachment, width, height);
+
+    wgpu::FenceDescriptor descriptor;
+    descriptor.initialValue = fenceValue;
+    fence = queue.CreateFence(&descriptor);
 }
 
 void Animation::init()

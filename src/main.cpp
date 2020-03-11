@@ -46,8 +46,14 @@ static void animationThread(Animation* animation, GLFWwindow* window)
     animation->init();
 
     for (;;) {
+        // printf("waiting for fence\n");
+        while (!animation->fenceCompleted()) {
+            loop->execute(5ms);
+            animation->tick();
+        }
+        // printf("fence signaled\n");
         animation->frame();
-        loop->execute(16ms);
+        animation->signalFence();
         if (loop->stopped())
             break;
     }
