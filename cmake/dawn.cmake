@@ -1,22 +1,33 @@
-if (NOT EXISTS "${THIRDPARTY_DIR}/dawn/.gclient")
+set(DAWN_SOURCE_DIR ${THIRDPARTY_DIR}/dawn)
+
+find_program(GCLIENT_EXE gclient HINTS "$ENV{HOME}/dev/depot_tools" "$ENV{HOME}/depot_tools")
+find_program(GN_EXE gn HINTS "$ENV{HOME}/dev/depot_tools" "$ENV{HOME}/depot_tools")
+if (NOT EXISTS ${GCLIENT_EXE})
+    message(FATAL_ERROR "Couldn't find gclient")
+endif()
+if (NOT EXISTS ${GN_EXE})
+    message(FATAL_ERROR "Couldn't find gn")
+endif()
+if (NOT EXISTS "${DAWN_SOURCE_DIR}/.gclient")
     execute_process(
-        COMMAND ./sync-dawn.sh
-        WORKING_DIRECTORY ${THIRDPARTY_DIR}
-        RESULT_VARIABLE SYNC_RESULT
+        COMMAND cp scripts/standalone.gclient .gclient
+        WORKING_DIRECTORY ${DAWN_SOURCE_DIR}
         )
+    execute_process(
+        COMMAND ${GCLIENT_EXE} sync
+        WORKING_DIRECTORY ${DAWN_SOURCE_DIR}
+        RESULT_VARIABLE SYNC_RESULT)
     if (NOT ${SYNC_RESULT} EQUAL 0)
         message(FATAL_ERROR "dawn sync failed")
     endif()
 endif()
-
-set(DAWN_SOURCE_DIR ${THIRDPARTY_DIR}/dawn)
 
 # configure
 if (CMAKE_BUILD_TYPE STREQUAL "Debug")
     set(DAWN_BINARY_DIR ${THIRDPARTY_BINARY_DIR}/dawn/Debug)
     if (NOT EXISTS ${DAWN_BINARY_DIR}/build.ninja)
         execute_process(
-            COMMAND gn gen ${DAWN_BINARY_DIR} "--args=is_debug = true"
+            COMMAND ${GN_EXE} gen ${DAWN_BINARY_DIR} "--args=is_debug = true"
             WORKING_DIRECTORY ${DAWN_SOURCE_DIR}
             )
     endif()
@@ -24,7 +35,7 @@ elseif (CMAKE_BUILD_TYPE STREQUAL "Release")
     set(DAWN_BINARY_DIR ${THIRDPARTY_BINARY_DIR}/dawn/Release)
     if (NOT EXISTS ${DAWN_BINARY_DIR}/build.ninja)
         execute_process(
-            COMMAND gn gen ${DAWN_BINARY_DIR} "--args=is_debug = false"
+            COMMAND ${GN_EXE} gen ${DAWN_BINARY_DIR} "--args=is_debug = false"
             WORKING_DIRECTORY ${DAWN_SOURCE_DIR}
             )
     endif()
