@@ -8,6 +8,7 @@ endif()
 if (NOT EXISTS ${GN_EXE})
     message(FATAL_ERROR "Couldn't find gn")
 endif()
+message("-- Using gclient from ${GCLIENT_EXE}")
 if (NOT EXISTS "${DAWN_SOURCE_DIR}/.gclient")
     execute_process(
         COMMAND cp scripts/standalone.gclient .gclient
