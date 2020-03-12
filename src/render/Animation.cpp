@@ -204,7 +204,7 @@ void Animation::init()
 
         layout(location = 0) out vec4 fragColor;
         void main() {
-            fragColor = texture(sampler2D(myTexture, mySampler), gl_FragCoord.xy / vec2(544.0, 184.0));
+            fragColor = texture(sampler2D(myTexture, mySampler), gl_FragCoord.xy / vec2(1280.0, 720.0));
         })");
 
         auto bgl = MakeBindGroupLayout(
